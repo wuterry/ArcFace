@@ -231,7 +231,9 @@ def train(net, opt, ctx):
 
 
 def main():
-    net = ArcFace(output_layer_name='vgg0_dense1_relu_fwd_output', num_class=classes, ctx=context, opt=opt)
+    net = ArcFace(backbone_output='vgg0_dense1_relu_fwd_output', num_class=classes, ctx=context, opt=opt)
+    # net.collect_params().initialize()
+
     if opt.builtin_profiler > 0:
         profiler.set_config(profile_all=True, aggregate_stats=True)
         profiler.set_state('run')
@@ -257,6 +259,7 @@ def main():
         mod.save_parameters('%s/image-classifier-%s-%d-final.params' % (save_dir, opt.model, opt.epochs))
     else:
         if opt.mode == 'hybrid':
+            print('Hybrid Network.')
             net.hybridize()
         train(net, opt, context)
     if opt.builtin_profiler > 0:
