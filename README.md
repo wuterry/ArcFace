@@ -18,4 +18,5 @@ python train_arcface.py --batch-size=256 --log-interval=20 --gpus=0 --lr=0.001 -
 |   loss   | softmax-loss | arcface-loss |
 |:--------:|:------------:|:------------:|
 | accuracy |    0.8247    |    0.8118    |
+
 From the results of the compared losses, the accuracy of arcface-loss is lower than softmax-loss.
