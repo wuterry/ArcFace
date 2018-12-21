@@ -26,7 +26,7 @@ def load_model(ctx, classes, opt):
 
 def get_backbone(output_layer_name, classes, ctx, opt):
     net = load_model(ctx, classes, opt)
-    data = mx.sym.var('data')
+    data = mx.sym.var(name='data')
     internals = net(data).get_internals()
     output_list = [internals[output_layer_name]]
     net = mx.gluon.SymbolBlock(output_list, data, params=net.collect_params())
@@ -42,7 +42,7 @@ class L2Normalization(nn.HybridBlock):
 
 
 class ArcFace(nn.HybridBlock):
-    def __init__(self, backbone_output, num_class, ctx, opt, margin_s=64, margin_m=0, easy_margin=False):
+    def __init__(self, backbone_output, num_class, ctx, opt, margin_s=64, margin_m=0.5, easy_margin=False):
         super(ArcFace, self).__init__()
         self.mode = opt.mode
         self.num_class = num_class
@@ -55,12 +55,11 @@ class ArcFace(nn.HybridBlock):
         self.mm = math.sin(math.pi - self.m) * self.m
         self.embedding = get_backbone(backbone_output, num_class, ctx, opt)
 
-        # with self.name_scope():
         self._units = num_class
         self._in_units = 4096
         self.fc_weight = self.params.get('fc_weight', shape=(self._units, self._in_units),
-                                         init=mx.initializer.Xavier(), dtype='float32')
-        self.fc_weight.initialize(mx.initializer.Xavier())
+                                         init=mx.initializer.Xavier(magnitude=2), dtype='float32')
+        self.fc_weight.initialize(mx.initializer.Xavier(magnitude=2))
 
     def hybrid_forward(self, F, x, label, fc_weight):
         embedding = F.L2Normalization(self.embedding(x))

@@ -1,20 +1,3 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-
 from __future__ import division
 
 import argparse, time, os
@@ -73,12 +56,14 @@ parser.add_argument('--resume', type=str, default='',
                     help='path to saved weight where you want resume')
 parser.add_argument('--lr-factor', default=0.1, type=float,
                     help='learning rate decay ratio')
-parser.add_argument('--lr-steps', default='30,60,90', type=str,
+parser.add_argument('--lr-steps', default='50,80,100', type=str,
                     help='list of learning rate decay epochs as in str')
 parser.add_argument('--dtype', default='float32', type=str,
                     help='data type, float32 or float16 if applicable')
 parser.add_argument('--save-frequency', default=10, type=int,
                     help='epoch frequence to save model, best model will always be saved')
+parser.add_argument('--save-type', default='mxnet', type=str,
+                    help='type of saving, gluon of mxnet.')
 parser.add_argument('--kvstore', type=str, default='device',
                     help='kvstore to use for trainer/module.')
 parser.add_argument('--log-interval', type=int, default=50,
@@ -148,15 +133,24 @@ def update_learning_rate(lr, trainer, epoch, ratio, steps):
     return trainer
 
 
-def save_checkpoint(net, epoch, top1, best_acc):
+def save_checkpoint(net, epoch, top1, best_acc, save_type='mxnet'):
+    save_prefix = f'{opt.prefix}/{opt.model}'
+
     if opt.save_frequency and (epoch + 1) % opt.save_frequency == 0:
-        fname = os.path.join(opt.prefix, '%s_%d_acc_%.4f.params' % (opt.model, epoch, top1))
-        net.save_parameters(fname)
-        logger.info('[Epoch %d] Saving checkpoint to %s with Accuracy: %.4f', epoch, fname, top1)
+        if save_type == 'gluon':
+            fname = os.path.join(save_prefix, '_%d_acc_%.4f.params' % (epoch, top1))
+            net.save_parameters(fname)
+        else:
+            net.export(save_prefix, epoch)
+            logger.info('[Epoch %d] Saving checkpoint with Accuracy: %.4f', epoch, top1)
+
     if top1 > best_acc[0]:
         best_acc[0] = top1
         fname = os.path.join(opt.prefix, '%s_best.params' % (opt.model))
-        net.save_parameters(fname)
+        if save_type == 'gluon':
+            net.save_parameters(fname)
+        else:
+            net.export(f'{save_prefix}-best', 0)
         logger.info('[Epoch %d] Saving checkpoint to %s with Accuracy: %.4f', epoch, fname, top1)
 
 
